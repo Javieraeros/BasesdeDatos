@@ -23,6 +23,7 @@ insert into Customers
 --2.Véndele (hoy) tres unidades de "Pavlova”, diez de "Inlagd Sill” y 25 de "Filo Mix”. El distribuidor será Speedy Express 
 --y el vendedor Laura Callahan.
 
+Begin transaction
 INSERT INTO [dbo].[Orders]
            ([CustomerID]
            ,[EmployeeID]
@@ -74,39 +75,35 @@ INSERT INTO [dbo].[Order Details]
            ,[UnitPrice]
            ,[Quantity]
            ,[Discount])
-     Select
+     Select distinct 
            O.OrderID
            ,P.ProductID
            ,P.UnitPrice
            ,3
            ,0.00
 		   from Orders as O
-		   inner join [Order Details] as OD
-		   on O.OrderID=OD.OrderID
-		   inner join Products as P
-		   on OD.ProductID=P.ProductID
+		   cross join [Order Details] as OD
+		   cross join Products as P
 		   where O.OrderID in (Select O.OrderID from Orders as O where O.CustomerID='FJRR' ) and
 				 P.ProductID in (Select P.ProductID from Products as P where P.ProductName='Pavlova')
 		   
 
 
-INSERT INTO [dbo].[Order Details]
+INSERT INTO [Order Details]
            ([OrderID]
            ,[ProductID]
            ,[UnitPrice]
            ,[Quantity]
            ,[Discount])
-     Select
+     Select distinct
            O.OrderID
            ,P.ProductID
            ,P.UnitPrice
            ,10
            ,0
 		   from Orders as O
-		   inner join [Order Details] as OD
-		   on O.OrderID=OD.OrderID
-		   inner join Products as P
-		   on OD.ProductID=P.ProductID
+		   cross join [Order Details] as OD
+		   cross join Products as P
 		   where O.OrderID in (Select O.OrderID from Orders as O where O.CustomerID='FJRR' ) and
 				 P.ProductID in (Select P.ProductID from Products as P where P.ProductName='Inlagd Sill')
 
@@ -117,22 +114,20 @@ INSERT INTO [dbo].[Order Details]
            ,[UnitPrice]
            ,[Quantity]
            ,[Discount])
-     Select
+     Select distinct
            O.OrderID
            ,P.ProductID
            ,P.UnitPrice
            ,25
            ,0
 		   from Orders as O
-		   inner join [Order Details] as OD
-		   on O.OrderID=OD.OrderID
-		   inner join Products as P
-		   on OD.ProductID=P.ProductID
+		   cross join [Order Details] as OD
+		   cross join Products as P
 		   where O.OrderID in (Select O.OrderID from Orders as O where O.CustomerID='FJRR' ) and
 				 P.ProductID in (Select P.ProductID from Products as P where P.ProductName='Filo Mix')
 GO
-
-
+Select * from Orders
+Select * from [Order Details]
 Rollback transaction
 --commit transaction   
 GO
