@@ -64,15 +64,23 @@ rollback transaction
 
 
 --VERSION BUENA BUENA BUENA-- 
---Primero creo una vista donde almaceno los datos que voy a eliminar, dicese las filas que contengan un complemento que vayamos a eliminar
-go
-create view PedidosAEliminar as 
+--Primero creo una tabla temporarl donde almaceno los complementos que voy a borrar y los datos que voy a eliminar, 
+--dicese las filas que contengan un complemento que vayamos a eliminar
+Select top 3 PC.IDComplemento,
+	   sum(PC.Cantidad) as Cantidad into #ComplementosBorrar
+from ICPedidosComplementos as PC
+inner join ICPedidos as P
+on PC.IDPedido=P.ID
+where P.Recibido>=CAST(N'2013-03-17 00:00:00' as smalldatetime) and P.Recibido<=CAST(N'2014-09-08 00:00:00' as smalldatetime)
+group by PC.IDComplemento
+order by Cantidad
+
+
 Select PC.IDPedido,
 	   PC.IDComplemento,
-	   PC.Cantidad
+	   PC.Cantidad into #PedidosAEliminar
 from ICPedidosComplementos as PC
-where IDComplemento in (Select IDComplemento from Ventas)
-go
+where IDComplemento in (Select IDComplemento from #ComplementosBorrar)
 --Después calculo el total de complementos que pasan a estar descatalogados y los meto en la tabla PedidosComplementos
 begin transaction
 INSERT INTO [dbo].[ICPedidosComplementos]
@@ -83,15 +91,16 @@ INSERT INTO [dbo].[ICPedidosComplementos]
            PAE.IDPedido
            ,111
            ,sum(PAE.Cantidad)
-	 from PedidosAEliminar as PAE
+	 from #PedidosAEliminar as PAE
 	 group by PAE.IDPedido
 
 
 --Por último elimino los pedidosComplementos que tenga algún complemento poco vendido(los 3 menos vendidos)
+
 Delete From ICPedidosComplementos
-where IDComplemento in (Select IDComplemento from Ventas)
+where IDComplemento in (Select IDComplemento from #ComplementosBorrar)
 Delete From ICComplementos
-where ID in (Select IDComplemento from Ventas)
+where ID in (Select IDComplemento from #ComplementosBorrar)
 rollback transaction
 --ME FALTA COMPROBARLO!!!
 
