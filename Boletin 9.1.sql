@@ -1,5 +1,5 @@
 --Boletin 9.1
---Escribe las siguientes consultas sobre la base de datos NorthWind.
+--Escribe las siguientes consultas sobre la base de datos NorthWind.Prueba
 Use Northwind
 --Pon el enunciado como comentario junta a cada una
 
