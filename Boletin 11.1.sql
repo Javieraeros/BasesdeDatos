@@ -58,10 +58,67 @@ on delete no action on update cascade
 )
 End
 rollback
-Use Northwind
 --2.Comprueba si existe una tabla llamada ShipShip. Esta tabla ha de tener de cada Transportista el ID, el Nombre de la compañía, 
 --el número total de envíos que ha efectuado y el número de países diferentes a los que ha llevado cosas. Si no existe, créala
+Begin Transaction
+If Object_ID('Shipship') is Null
+Begin
+Create Table ShipShip(
+ID int constraint PK_Shipship primary key  Not Null
+, NombreComapñía nvarchar(40)  null 
+, Envios int not null constraint CK_UnidadesMinimas check ([Envios]>=0)
+, Paises int null
+)
+End
+rollback
 
 --3.Comprueba si existe una tabla llamada EmployeeSales. Esta tabla ha de tener de cada empleado su ID, el Nombre completo, 
 --el número de ventas totales que ha realizado, el número de clientes diferentes a los que ha vendido y el total de dinero facturado. 
 --Si no existe, créala
+Begin Transaction
+If Object_ID('EmployeeSales') is Null
+Begin
+Create Table ShipShip(
+ID int constraint PK_Shipship primary key  Not Null
+, NombreCompleto nvarchar(50)  null 
+, VentasRealizadas int not null constraint CK_UnidadesMinimas check ([VentasRealizadas]>=0)
+, Clientes int null
+,DineroFacturado money null
+)
+End
+rollback
+
+--4.Entre los años 96 y 97 hay productos que han aumentado sus ventas y otros que las han disminuido. 
+--Queremos cambiar el precio unitario según la siguiente tabla:
+--Incremento de ventas	Incremento de precio
+--Negativo	            -10%
+--Entre 0 y 10%           No varía
+--Entre 10% y 50%         +5%
+--Mayor del 50%			10% con un máximo de 2,25
+
+--Creamos una vista que nos diga las diferencias de un año a otro
+go
+create view PorcentajeVentas as 
+Select P.ProductID,
+	   (V97.[Ventas Totales del 97]-V96.[Ventas Totales del 96])/V96.[Ventas Totales del 96]*100 as DiferenciaDeVentas
+from [Ventas 97] as V97
+inner join [Ventas 96] as V96
+on V97.ProductName=V96.ProductName
+inner join Products as P
+on V97.ProductName=P.ProductName
+go
+
+Begin Transaction
+Select * From Products
+Update Products SET
+	UnitPrice=
+		Case
+		when DiferenciaDeVentas>=50 Then 1.10*UnitPrice
+		when DiferenciaDeVentas>=10 Then 1.05*UnitPrice --Puesto qeu se devuelve la primera, omito las condicioens innecesarias
+		when DiferenciaDeVentas>=0  Then UnitPrice
+		when DiferenciaDeVentas<0 Then 0.9*UnitPrice
+		End
+	From PorcentajeVentas
+	Where PorcentajeVentas.ProductID=Products.ProductID
+Select * From Products
+Rollback transaction
