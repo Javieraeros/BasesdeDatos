@@ -41,7 +41,7 @@ End
 Select * from Products
 Rollback
 
---1,5.Comprueba si existe una tabla llamada ProductSales. Esta tabla ha de tener de cada producto el ID, el Nombre, 
+--2.Comprueba si existe una tabla llamada ProductSales. Esta tabla ha de tener de cada producto el ID, el Nombre, 
 --el Precio unitario, el número total de unidades vendidas y el total de dinero facturado con ese producto. Si no existe, créala
 
 Begin Transaction
@@ -49,22 +49,29 @@ If Object_ID('ProductSales') is Null
 Begin
 Create Table ProductSales(
 ID int constraint PK_ProductSales primary key  Not Null
-, Nombre nvarchar(20)  null
+, Nombre nvarchar(40)  null
 , PrecioUnitario money null 
 , UnidadesVendidas int not null constraint CK_UnidadesMinimas check ([UnidadesVendidas]>=0)
-, Facturado as PrecioUnitario*UnidadesVendidas
+, Facturado money null
 ,constraint FK_Product_ProductSales foreign key (ID) references Products (ProductID)
 on delete no action on update cascade
 )
+Insert into ProductSales(ID,Nombre,PrecioUnitario,UnidadesVendidas,Facturado)
+Select P.ProductID, P.ProductName, P.UnitPrice, Sum(O.Quantity), Sum(O.Quantity*O.UnitPrice)
+from Products as P
+inner join [Order Details] as O
+on P.ProductID=O.ProductID
+group by P.ProductID,P.ProductName,P.UnitPrice
 End
+Select * from ProductSales
 rollback
---2.Comprueba si existe una tabla llamada ShipShip. Esta tabla ha de tener de cada Transportista el ID, el Nombre de la compañía, 
+--3.Comprueba si existe una tabla llamada ShipShip. Esta tabla ha de tener de cada Transportista el ID, el Nombre de la compañía, 
 --el número total de envíos que ha efectuado y el número de países diferentes a los que ha llevado cosas. Si no existe, créala
 Begin Transaction
 If Object_ID('Shipship') is Null
 Begin
 Create Table ShipShip(
-ID int constraint PK_Shipship primary key  Not Null
+ID int constraint PK_Shipship primary key  Not Null constraint FK_IDShippers references Shippers 
 , NombreComapñía nvarchar(40)  null 
 , Envios int not null constraint CK_UnidadesMinimas check ([Envios]>=0)
 , Paises int null
@@ -72,7 +79,7 @@ ID int constraint PK_Shipship primary key  Not Null
 End
 rollback
 
---3.Comprueba si existe una tabla llamada EmployeeSales. Esta tabla ha de tener de cada empleado su ID, el Nombre completo, 
+--4.Comprueba si existe una tabla llamada EmployeeSales. Esta tabla ha de tener de cada empleado su ID, el Nombre completo, 
 --el número de ventas totales que ha realizado, el número de clientes diferentes a los que ha vendido y el total de dinero facturado. 
 --Si no existe, créala
 Begin Transaction
@@ -88,7 +95,7 @@ ID int constraint PK_Shipship primary key  Not Null
 End
 rollback
 
---4.Entre los años 96 y 97 hay productos que han aumentado sus ventas y otros que las han disminuido. 
+--5.Entre los años 96 y 97 hay productos que han aumentado sus ventas y otros que las han disminuido. 
 --Queremos cambiar el precio unitario según la siguiente tabla:
 --Incremento de ventas	Incremento de precio
 --Negativo	            -10%
