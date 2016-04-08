@@ -113,7 +113,11 @@ Select * From Products
 Update Products SET
 	UnitPrice=
 		Case
-		when DiferenciaDeVentas>=50 Then 1.10*UnitPrice
+		when DiferenciaDeVentas>=50 Then
+			case
+				when 1.10*UnitPrice>=2.25 then UnitPrice+2.25
+				else 1.10*UnitPrice
+				End
 		when DiferenciaDeVentas>=10 Then 1.05*UnitPrice --Puesto qeu se devuelve la primera, omito las condicioens innecesarias
 		when DiferenciaDeVentas>=0  Then UnitPrice
 		when DiferenciaDeVentas<0 Then 0.9*UnitPrice
