@@ -23,7 +23,7 @@ Rollback
 Escribe un procedimiento almacenado que reciba como parámetro el ID de un pasajero y devuelva en un parámetro de salida el número 
 de vuelos diferentes que ha tomado ese pasajero.*/
 go
-Alter Procedure DevuelveVuelos @Id int,@vuelos int OUTPUT as 
+Alter Procedure DevuelveVuelos @Id char(9),@vuelos int OUTPUT as --Muy importante: El Id es una cadena!!
 Begin
 Select @vuelos=count(VP.Codigo_Vuelo) From AL_Vuelos_Pasajes as VP
 inner join AL_Pasajes as P
@@ -34,15 +34,30 @@ Where Ps.ID=@Id
 return @vuelos
 end
 go
+
+
 Declare @Vuelos int
-Execute DevuelveVuelos 2,@Vuelos OUTPUT
-print 'Numero de Vuelos: '+@Vuelos
+Execute DevuelveVuelos 'B007',@Vuelos OUTPUT
+print 'Número de Vuelos: '+ cast(@Vuelos as varchar(5))
 
 
 /*Ejercicio 3
 Escribe un procedimiento almacenado que reciba como parámetro el ID de un pasajero y dos fechas y nos devuelva en otro parámetro 
 (de salida) el número de horas que ese pasajero ha volado durante ese intervalo de fechas.*/
-
+go
+create Procedure VuelaPasajero @Id varchar(9),@entrada smalldatetime,@salida smalldatetime,@tiempo int OutPut AS --Minutos 
+Begin
+If(
+	Select  
+	From AL_Pasajeros as Ps
+	inner join AL_Pasajes as P
+	on Ps.ID=P.ID_Pasajero
+	inner join AL_Vuelos_Pasajes as VP
+	on P.Numero=VP.Numero_Pasaje
+	inner join Al
+)
+End
+go
 /*Ejercicio 4
 Escribe un procedimiento que reciba como parámetro todos los datos de un pasajero y un número de vuelo y realice el siguiente proceso:
 En primer lugar, comprobará si existe el pasajero. Si no es así, lo dará de alta.
