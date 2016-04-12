@@ -5,9 +5,39 @@ Use AirLeo
 Escribe un procedimiento que cancele un pasaje y las tarjetas de embarque asociadas.
 Recibirá como parámetros el ID del pasaje.*/
 
+go
+Alter Procedure CancelarPasaje @Id int as
+Begin
+Delete From AL_Tarjetas
+where Numero_Pasaje=@Id
+Delete From AL_Vuelos_Pasajes
+where Numero_Pasaje=@Id
+Delete From AL_Pasajes
+where Numero=@Id
+End
+Go
+Begin Transaction
+Execute CancelarPasaje 5
+Rollback
 /*Ejercicio 2
 Escribe un procedimiento almacenado que reciba como parámetro el ID de un pasajero y devuelva en un parámetro de salida el número 
 de vuelos diferentes que ha tomado ese pasajero.*/
+go
+Alter Procedure DevuelveVuelos @Id int,@vuelos int OUTPUT as 
+Begin
+Select @vuelos=count(VP.Codigo_Vuelo) From AL_Vuelos_Pasajes as VP
+inner join AL_Pasajes as P
+on VP.Numero_Pasaje=P.Numero
+inner join AL_Pasajeros as Ps
+on P.ID_Pasajero=Ps.ID
+Where Ps.ID=@Id
+return @vuelos
+end
+go
+Declare @Vuelos int
+Execute DevuelveVuelos 2,@Vuelos OUTPUT
+print 'Numero de Vuelos: '+@Vuelos
+
 
 /*Ejercicio 3
 Escribe un procedimiento almacenado que reciba como parámetro el ID de un pasajero y dos fechas y nos devuelva en otro parámetro 

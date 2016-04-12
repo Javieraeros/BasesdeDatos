@@ -68,15 +68,25 @@ rollback
 --3.Comprueba si existe una tabla llamada ShipShip. Esta tabla ha de tener de cada Transportista el ID, el Nombre de la compañía, 
 --el número total de envíos que ha efectuado y el número de países diferentes a los que ha llevado cosas. Si no existe, créala
 Begin Transaction
-If Object_ID('Shipship') is Null
+If Object_ID('ShipshipJavi') is Null
 Begin
-Create Table ShipShip(
+Create Table ShipShipJavi(
 ID int constraint PK_Shipship primary key  Not Null constraint FK_IDShippers references Shippers 
-, NombreComapñía nvarchar(40)  null 
+, NombreCompañía nvarchar(40)  null 
 , Envios int not null constraint CK_UnidadesMinimas check ([Envios]>=0)
 , Paises int null
 )
+Insert Into ShipShipJavi(ID,NombreCompañía,Envios,Paises)
+Select ShipperID,
+	   CompanyName,
+	   count(shipvia),
+	   count(distinct shipCountry)
+	   From Shippers as S
+	   inner join Orders as O
+	   on O.ShipVia=S.ShipperID
+	   group by ShipperID,CompanyName
 End
+Select*from ShipShipJavi
 rollback
 
 --4.Comprueba si existe una tabla llamada EmployeeSales. Esta tabla ha de tener de cada empleado su ID, el Nombre completo, 
