@@ -6,7 +6,7 @@ Escribe un procedimiento que cancele un pasaje y las tarjetas de embarque asocia
 Recibirá como parámetros el ID del pasaje.*/
 
 go
-Alter Procedure CancelarPasaje @Id int as
+Create Procedure CancelarPasaje @Id int as
 Begin
 Delete From AL_Tarjetas
 where Numero_Pasaje=@Id
@@ -23,7 +23,7 @@ Rollback
 Escribe un procedimiento almacenado que reciba como parámetro el ID de un pasajero y devuelva en un parámetro de salida el número 
 de vuelos diferentes que ha tomado ese pasajero.*/
 go
-Alter Procedure DevuelveVuelos @Id char(9),@vuelos int OUTPUT as --Muy importante: El Id es una cadena!!
+Create Procedure DevuelveVuelos @Id char(9),@vuelos int OUTPUT as --Muy importante: El Id es una cadena!!
 Begin
 Select @vuelos=count(VP.Codigo_Vuelo) From AL_Vuelos_Pasajes as VP
 inner join AL_Pasajes as P
@@ -54,7 +54,8 @@ If(
 	on Ps.ID=P.ID_Pasajero
 	inner join AL_Vuelos_Pasajes as VP
 	on P.Numero=VP.Numero_Pasaje
-	inner join Al
+	inner join Al_Vuelos as V
+	on VP.Codigo_Vuelo=V.Codigo
 )
 End
 go
