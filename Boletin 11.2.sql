@@ -133,18 +133,6 @@ create procedure asignaVuelo @ID varchar(9)    --se ve mejor así
 			VALUES
 				(@NumeroPasaje
 				,@ID)
-			--Insetamos ahora en vuelos pasajes
-			INSERT INTO [dbo].[AL_Vuelos_Pasajes]
-					   ([Codigo_Vuelo]
-					   ,[Numero_Pasaje]
-					   ,[Embarcado])
-				 VALUES
-					   (@Codigo_vuelo
-					   ,@NumeroPasaje
-					   ,'N')
-
-
-
 		End
 	--En caso de que no exsiten plazas, se devovlerá el número correspondiente, sin tener que hacer nada más
 	End
