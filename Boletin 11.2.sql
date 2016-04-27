@@ -23,22 +23,20 @@ Rollback
 Escribe un procedimiento almacenado que reciba como parámetro el ID de un pasajero y devuelva en un parámetro de salida el número 
 de vuelos diferentes que ha tomado ese pasajero.*/
 go
-Create Procedure DevuelveVuelos @Id char(9),
+alter Procedure DevuelveVuelos @Id char(9),
 								@vuelos int OUTPUT as --Muy importante: El Id es una cadena!!
 Begin
-Select @vuelos=count(VP.Codigo_Vuelo) From AL_Vuelos_Pasajes as VP
+Select @vuelos=count(distinct VP.Codigo_Vuelo) From AL_Vuelos_Pasajes as VP
 inner join AL_Pasajes as P
 on VP.Numero_Pasaje=P.Numero
-inner join AL_Pasajeros as Ps
-on P.ID_Pasajero=Ps.ID
-Where Ps.ID=@Id
+Where P.ID_Pasajero=@Id
 return @vuelos
 end
 go
 
 
 Declare @Vuelos int
-Execute DevuelveVuelos 'B007',@Vuelos OUTPUT
+Execute DevuelveVuelos 'A003',@Vuelos OUTPUT
 print 'Número de Vuelos: '+ cast(@Vuelos as varchar(5))
 
 
@@ -69,16 +67,18 @@ Execute VuelaPasajero 'A007','2012-01-14 14:05:00','2014-01-14 14:05:00',@HorasV
 print 'Horas de vuelo: '+ cast(@HorasVuelo as varchar(5))
 go
 /*Ejercicio 4
-Escribe un procedimiento que reciba como parámetro todos los datos de un pasajero y un número de vuelo y realice el siguiente proceso:
+Escribe un procedimiento que reciba como parámetro todos los datos de un pasajero y un número 
+de vuelo y realice el siguiente proceso:
 En primer lugar, comprobará si existe el pasajero. Si no es así, lo dará de alta.
-A continuación comprobará si el vuelo tiene plazas disponibles (hay que consultar la capacidad del avión) y en caso afirmativo 
+A continuación comprobará si el vuelo tiene plazas disponibles (hay que consultar 
+la capacidad del avión) y en caso afirmativo 
 creará un nuevo pasaje para ese vuelo.*/
 
 --Devolverá: -2 si crea el pasajero pero no hay plazas disponibles,
 --			 -1 si el pasajero existe pero no hay plazas disponibles
 --            0 si crea el pasajero y le asigna el vuelo
 --            1 si el pasajero existe y le asigna el vuelo
-create procedure asignaVuelo @ID varchar(9)    --se ve mejor así
+alter procedure asignaVuelo @ID varchar(9)    --se ve mejor así
            ,@Nombre varchar(20)
            ,@Apellidos varchar(50)
            ,@Direccion varchar(60)
@@ -87,10 +87,13 @@ create procedure asignaVuelo @ID varchar(9)    --se ve mejor así
 		   ,@Codigo_vuelo int
 		   ,@Salida int output AS
 	Begin
+	--Creamos el nuevo número para la tabla pasaje
+	Declare @NumeroPasaje int
 	--Primero miramos si el pasajero existe, y de no existir lo creamos
 	If @Id not in (Select ID from AL_Pasajeros)
 		Begin
-		SET @Salida=-2 --Si el pasajero no existe le damos este valor, si hay plaza le sumaremos dos, sino, l odejaremos tal como está
+		SET @Salida=-2 --Si el pasajero no existe le damos este valor, si hay 
+						--plaza le sumaremos dos, sino, lo dejaremos tal como está
 		INSERT INTO [dbo].[AL_Pasajeros]
 				   ([ID]
 				   ,[Nombre]
@@ -122,9 +125,8 @@ create procedure asignaVuelo @ID varchar(9)    --se ve mejor así
 
 		Begin
 			--Actualizamos el valor de la salida
-			SET @Salida=@Salida+1
-			--Creamos el nuevo número para la tabla pasaje
-			Declare @NumeroPasaje int
+			SET @Salida=@Salida+2
+			Begin transaction
 			Set @NumeroPasaje=(Select max(Numero) from AL_Pasajes)+1
 			--insertamos
 			INSERT INTO [dbo].[AL_Pasajes]
@@ -133,16 +135,33 @@ create procedure asignaVuelo @ID varchar(9)    --se ve mejor así
 			VALUES
 				(@NumeroPasaje
 				,@ID)
+			commit transaction
+			INSERT INTO [dbo].[AL_Vuelos_Pasajes]
+					   ([Codigo_Vuelo]
+					   ,[Numero_Pasaje]
+					   ,[Embarcado])
+				 VALUES
+					   (@Codigo_vuelo
+					   ,@NumeroPasaje
+					   ,'N')
+
 		End
 	--En caso de que no exsiten plazas, se devovlerá el número correspondiente, sin tener que hacer nada más
 	End
 go
+Declare @Resultado int
+Execute asignaVuelo 1500,'Javier','Ruiz','Mi casa','1992-11-19','España',15,@Resultado OUTPUT
+print @Resultado
 /*Ejercicio 5
 Escribe un procedimiento almacenado que cancele un vuelo y reubique a sus pasajeros en otro. Se ocuparán los asientos libres en el 
 vuelo sustituto. Se comprobará que ambos vuelos realicen el mismo recorrido. Se borrarán todos los pasajes y las tarjetas de embarque 
 y se generarán nuevos pasajes. No se generarán nuevas tarjetas de embarque. El vuelo a cancelar y el sustituto se pasarán como parámetros. 
 Si no se pasa el vuelo sustituto, se buscará el primer vuelo inmediatamente posterior al cancelado que realice el mismo recorrido.*/
+go
+create Procedure ReubicaPasajeros @cancelar int, @sustituto int as 
 
+
+go
 /*Ejercicio 6
 Escribe un procedimiento al que se pase como parámetros un código de un avión y un momento (dato fecha-hora) y nos escriba un mensaje 
 que indique dónde se encontraba ese avión en ese momento. El mensaje puede ser "En vuelo entre los aeropuertos de NombreAeropuertoSalida 
