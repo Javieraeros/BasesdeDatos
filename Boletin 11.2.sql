@@ -159,8 +159,21 @@ y se generarán nuevos pasajes. No se generarán nuevas tarjetas de embarque. El v
 Si no se pasa el vuelo sustituto, se buscará el primer vuelo inmediatamente posterior al cancelado que realice el mismo recorrido.*/
 go
 create Procedure ReubicaPasajeros @cancelar int, @sustituto int as 
+delete AL_Vuelos_Pasajes
+	where Codigo_Vuelo=@cancelar
+delete AL_Tarjetas
+	where Codigo_Vuelo=@cancelar
+delete AL_Tarjetas
+	where Codigo_Vuelo=@cancelar
+delete AL_Vuelos
+	where Codigo=@cancelar
+delete AL_Pasajes
+	where Numero
 
+if @sustituto is not null
+Begin
 
+End
 go
 /*Ejercicio 6
 Escribe un procedimiento al que se pase como parámetros un código de un avión y un momento (dato fecha-hora) y nos escriba un mensaje 
