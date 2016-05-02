@@ -23,7 +23,7 @@ Rollback
 Escribe un procedimiento almacenado que reciba como parámetro el ID de un pasajero y devuelva en un parámetro de salida el número 
 de vuelos diferentes que ha tomado ese pasajero.*/
 go
-alter Procedure DevuelveVuelos @Id char(9),
+create Procedure DevuelveVuelos @Id char(9),
 								@vuelos int OUTPUT as --Muy importante: El Id es una cadena!!
 Begin
 Select @vuelos=count(distinct VP.Codigo_Vuelo) From AL_Vuelos_Pasajes as VP
@@ -44,7 +44,7 @@ print 'Número de Vuelos: '+ cast(@Vuelos as varchar(5))
 Escribe un procedimiento almacenado que reciba como parámetro el ID de un pasajero y dos fechas y nos devuelva en otro parámetro 
 (de salida) el número de horas que ese pasajero ha volado durante ese intervalo de fechas.*/
 go
-alter Procedure VuelaPasajero @Id varchar(9),
+create Procedure VuelaPasajero @Id varchar(9),
 							  @empieza smalldatetime,
 							  @acaba smalldatetime,
 							  @tiempo int OutPut AS --Horas
@@ -78,7 +78,7 @@ creará un nuevo pasaje para ese vuelo.*/
 --			 -1 si el pasajero existe pero no hay plazas disponibles
 --            0 si crea el pasajero y le asigna el vuelo
 --            1 si el pasajero existe y le asigna el vuelo
-alter procedure asignaVuelo @ID varchar(9)    --se ve mejor así
+create procedure asignaVuelo @ID varchar(9)    --se ve mejor así
            ,@Nombre varchar(20)
            ,@Apellidos varchar(50)
            ,@Direccion varchar(60)
@@ -152,28 +152,200 @@ go
 Declare @Resultado int
 Execute asignaVuelo 1500,'Javier','Ruiz','Mi casa','1992-11-19','España',15,@Resultado OUTPUT
 print @Resultado
+go
+
 /*Ejercicio 5
 Escribe un procedimiento almacenado que cancele un vuelo y reubique a sus pasajeros en otro. Se ocuparán los asientos libres en el 
 vuelo sustituto. Se comprobará que ambos vuelos realicen el mismo recorrido. Se borrarán todos los pasajes y las tarjetas de embarque 
 y se generarán nuevos pasajes. No se generarán nuevas tarjetas de embarque. El vuelo a cancelar y el sustituto se pasarán como parámetros. 
 Si no se pasa el vuelo sustituto, se buscará el primer vuelo inmediatamente posterior al cancelado que realice el mismo recorrido.*/
 go
-create Procedure ReubicaPasajeros @cancelar int, @sustituto int as 
+create Procedure ReubicaPasajeros @cancelar int, @sustituto int as
+SET NOCOUNT ON
+--Declaramos la variable pasajeros como una tabla para almacenar ahí lso pasajeros que vamos a cambiar de vuelo
+declare @pasajeros as table(
+	[ID] [char](9) NOT NULL,
+	[Nombre] [varchar](20) NOT NULL,
+	[Apellidos] [varchar](50) NOT NULL,
+	[Direccion] [varchar](60) NULL,
+	[Fecha_Nacimiento] [date] NOT NULL,
+	[Nacionalidad] [varchar](30) NULL
+)
+--Insertamos los pasajeros que vayan a coger el vuelo a cancelar
+Insert into @pasajeros
+			(
+			[ID],
+			[Nombre],
+			[Apellidos],
+			[Direccion],
+			[Fecha_Nacimiento],
+			[Nacionalidad]
+		)
+		Select ID,
+			   nombre,
+			   apellidos,
+			   direccion,
+			   fecha_nacimiento,
+			   Nacionalidad 
+		from AL_Pasajeros
+		where ID in (
+			Select P.ID_Pasajero from AL_Vuelos_Pasajes as VP
+			inner join AL_Pasajes as P
+			on VP.Numero_Pasaje=P.Numero
+			where VP.Codigo_Vuelo=@cancelar
+			)
+/*Borramos todo lo relativo a ese vuelo.
+Para ello, es necesario almacenar los pasajes del vuelo que vamos a eliminar,debido a las restricciones de on delete no action
+de las tablas Tarjetas y Vuelos pasajes (que deben ser las primeras en eliminarse)
+*/
+declare @pasajesEliminar as table(
+	[Codigo_Vuelo] [int] NOT NULL,
+	[Numero_Pasaje] [int] NOT NULL,
+	[Embarcado] [char](1) NOT NULL
+	)
+insert into @pasajesEliminar (
+	Codigo_vuelo,
+	Numero_Pasaje,
+	Embarcado
+	)
+	Select
+		Codigo_Vuelo,
+		Numero_Pasaje,
+		Embarcado
+	from AL_Vuelos_Pasajes
+		where Codigo_Vuelo=@cancelar
+--Ahora borramos todo lo relativo al vuelo
+delete AL_Tarjetas
+	where Codigo_Vuelo=@cancelar
+/*delete AL_Vuelos
+	where Codigo=@cancelar*/ --No creo que sea necesario
 delete AL_Vuelos_Pasajes
 	where Codigo_Vuelo=@cancelar
-delete AL_Tarjetas
-	where Codigo_Vuelo=@cancelar
-delete AL_Tarjetas
-	where Codigo_Vuelo=@cancelar
-delete AL_Vuelos
-	where Codigo=@cancelar
 delete AL_Pasajes
-	where Numero
+	where Numero in (
+		Select Numero_Pasaje
+		from @pasajesEliminar
+		)
+if @sustituto is not null 
+			and 
+			(Select Aeropuerto_Salida from AL_Vuelos
+				where @cancelar=Codigo)=
+			(Select Aeropuerto_Salida from AL_Vuelos
+				where @sustituto=Codigo)              --Comprobamos que el aeropuerto de salida sea el mismo
+			and
 
-if @sustituto is not null
+			(Select Aeropuerto_Llegada from AL_Vuelos
+				where @cancelar=Codigo)=
+			(Select Aeropuerto_Llegada from AL_Vuelos
+				where @sustituto=Codigo)              --Comprobamos que el aeropuerto de llegada sea el mismo
+			and 
+
+			(Select Asientos_x_Fila*Filas-count(Codigo_vuelo) from AL_Tarjetas
+					inner join AL_Vuelos as V
+					on Codigo_Vuelo=V.Codigo
+					inner join AL_Aviones as A
+					on V.Matricula_Avion=A.Matricula
+					where Codigo_Vuelo=@sustituto
+					group by Asientos_x_Fila,Filas
+			)
+				>                                      --Comprobamos que hay asientos libres
+			(Select count(ID) from @pasajeros)
 Begin
-
+/*Guardamos en una tabla temporal los pasajes que vamos a crear/insertar en la tabla pasajes,
+para después insertarlos en la tabla Vuelos_Pasajes*/
+declare @pasajesTemporal as Table(
+	[Numero] [int] NOT NULL,
+	[ID_Pasajero] [char](9) NOT NULL
+)
+INSERT INTO @pasajesTemporal
+	([Numero]
+	,[ID_Pasajero])
+Select
+	(Select max(Numero) from AL_Pasajes)+ROW_NUMBER() OVER(ORDER BY ID DESC)
+	,ID as ID
+	from @pasajeros
+--Insertamos en la tabla Pasajes los nuevos pasajes
+Insert Into AL_Pasajes
+	([Numero]
+	,[ID_Pasajero])
+Select
+	Numero
+	,ID_Pasajero
+	from @pasajesTemporal
+INSERT INTO [dbo].[AL_Vuelos_Pasajes]
+		([Codigo_Vuelo]
+		,[Numero_Pasaje]
+		,[Embarcado])
+	Select
+		@sustituto
+		,Numero
+		,'N'
+	from @pasajesTemporal
 End
+ELSE
+begin
+
+declare @cancelar int
+set @cancelar=6
+--Declaramos la variable pasajeros como una tabla para almacenar ahí lso pasajeros que vamos a cambiar de vuelo
+declare @pasajeros as table(
+	[ID] [char](9) NOT NULL,
+	[Nombre] [varchar](20) NOT NULL,
+	[Apellidos] [varchar](50) NOT NULL,
+	[Direccion] [varchar](60) NULL,
+	[Fecha_Nacimiento] [date] NOT NULL,
+	[Nacionalidad] [varchar](30) NULL
+)
+--Insertamos los pasajeros que vayan a coger el vuelo a cancelar
+Insert into @pasajeros
+			(
+			[ID],
+			[Nombre],
+			[Apellidos],
+			[Direccion],
+			[Fecha_Nacimiento],
+			[Nacionalidad]
+		)
+		Select ID,
+			   nombre,
+			   apellidos,
+			   direccion,
+			   fecha_nacimiento,
+			   Nacionalidad 
+		from AL_Pasajeros
+		where ID in (
+			Select P.ID_Pasajero from AL_Vuelos_Pasajes as VP
+			inner join AL_Pasajes as P
+			on VP.Numero_Pasaje=P.Numero
+			where VP.Codigo_Vuelo=@cancelar
+			)
+
+
+declare @nuevoSustituto int
+Select Top 1 @nuevoSustituto=Codigo from AL_Vuelos
+where Aeropuerto_Salida=(Select Aeropuerto_Salida from AL_Vuelos
+				where Codigo=@cancelar)
+	  and
+	  Aeropuerto_Llegada=(Select Aeropuerto_Llegada from AL_Vuelos
+				where Codigo=@cancelar)
+	  and
+	  Salida>(Select Salida from AL_Vuelos
+				where Codigo=@cancelar)
+
+	  and 
+	  (Select Asientos_x_Fila*Filas-count(Codigo_vuelo) from AL_Tarjetas
+			inner join AL_Vuelos as V
+			on Codigo_Vuelo=V.Codigo
+			inner join AL_Aviones as A
+			on V.Matricula_Avion=A.Matricula
+			group by Asientos_x_Fila,Filas
+	  )
+	  >                                      
+	  (Select count(ID) from @pasajeros)
+	--Me falta controlar que haya huecos libres
+order by Salida
+print @nuevoSustituto
+end
 go
 /*Ejercicio 6
 Escribe un procedimiento al que se pase como parámetros un código de un avión y un momento (dato fecha-hora) y nos escriba un mensaje 
