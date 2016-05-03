@@ -171,7 +171,7 @@ inner join AL_Vuelos_Pasajes as VP
 on V.Codigo=VP.Codigo_Vuelo
 group by Codigo,Asientos_x_Fila,Filas
 go
-alter Procedure ReubicaPasajeros @cancelar int, @sustituto int=null as
+create Procedure ReubicaPasajeros @cancelar int, @sustituto int=null as
 Begin
 SET NOCOUNT ON
 
@@ -352,3 +352,51 @@ que indique dónde se encontraba ese avión en ese momento. El mensaje puede ser "
 y NombreaeropuertoLlegada” si el avión estaba volando en ese momento, o "En tierra en el aeropuerto NombreAeropuerto” si no está volando. 
 Para saber en qué aeropuerto se encuentra el avión debemos consultar el último vuelo que realizó antes del momento indicado.
 Si se omite el segundo parámetro, se tomará el momento actual.*/
+
+go
+alter procedure EncuentraAvion @matricula char(10), @momento smalldatetime as
+Begin
+	Declare @salida char(3),@llegada char(3)
+	IF Exists (
+			  Select Matricula_Avion from AL_Vuelos
+			  where @momento between Salida and Llegada
+					and
+					Matricula_Avion=@matricula
+			  )
+		Begin
+			Select @salida=Aeropuerto_Salida,@llegada=Aeropuerto_Llegada 
+				from AL_Vuelos 
+				where @momento between Salida and Llegada and Matricula_Avion=@matricula
+			print 'El avion se encuentra volando entre ' +cast (@salida as varchar)+' y '+cast (@llegada as varchar)
+		End
+	ELSE
+		Begin
+		Select top 1 @llegada=Aeropuerto_Llegada 
+			from AL_Vuelos
+			where @momento>Llegada and Matricula_Avion=@matricula
+			order by Llegada desc
+			print 'El avion se encuentra estacionado en el aeropuerto: '+cast(@llegada as varchar)
+		End
+End
+go
+
+-- Establecememos el formato horario dd/mm/yyyy
+SET DATEFORMAT DMY
+
+-- Creamos la variable fecha para buscar por fecha
+DECLARE @Fecha Smalldatetime
+SELECT @Fecha = '01-02-2013 14:47:00'
+
+DECLARE @Fecha2 Smalldatetime
+SELECT @Fecha2 = '14-09-2013 14:45:00'
+
+-- Creamos la variable avion para buscar por matricula del avion
+DECLARE @Avion char(10)
+SELECT @Avion = 'ESP4502'
+
+-- Buscamos un avion por matricula
+EXECUTE EncuentraAvion @Avion, @Fecha
+
+-- Comprobamos si funciona 
+SELECT * FROM AL_Vuelos WHERE Matricula_Avion = 'ESP4502'
+ORDER BY Salida
