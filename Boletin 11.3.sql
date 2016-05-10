@@ -161,13 +161,13 @@ set dateformat 'ymd'
 
 --2. Diseña una función fn_horasVuelo a la que se pase un código de avión y un rango de fechas 
 --y nos devuelva las horas totales que ha volado ese avión en ese rango de fechas.
-
+GO
 ALTER FUNCTION fn_horasVuelo (@codigo char(10),@fechainicio SmallDateTime,@fechafin SmallDateTime) RETURNS int as
 BEGIN
 DECLARE @resultado int=-1
 	if(@fechainicio<@fechafin)
 	BEGIN
-		Select @resultado=DATEDIFF(MINUTE,salida,llegada)/60
+		Select @resultado=sum(DATEDIFF(MINUTE,salida,llegada))/60
 		from AL_Vuelos
 		where Salida>=@fechainicio and Llegada<=@fechafin
 				and Matricula_Avion=@codigo
@@ -178,11 +178,15 @@ GO
 
 Select * from AL_Vuelos where Matricula_Avion='ESP4502'
 declare @horas int
-Execute @horas=fn_horasVuelo 'ESP4502','2013-11-15 15:00:00','2015-10-05 15:00:00' 
+Execute @horas=fn_horasVuelo 'ESP4502','2010-11-13 15:00:00','2015-11-14 18:00:00' 
 print @horas
 
 --3. Diseña una función a la que se pase un código de avión y un rango de fechas y nos devuelva 
 --una tabla con los nombres y fechas de todos los aeropuertos en que ha estado el avión en ese intervalo.
+GO
+CREATE FUNCTION
+
+GO
 --4. Diseña una función fn_ViajesCliente que nos devuelva nombre y apellidos, 
 --kilómetros recorridos y número de vuelos efectuados por cada cliente en un rango de fechas, 
 --ordenado de mayor a menor distancia recorrida.
