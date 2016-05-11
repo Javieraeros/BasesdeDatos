@@ -36,7 +36,7 @@ GO
 
 GO
 declare @papel decimal(6,2)
-EXECUTE @papel=fn_PapelEnvolver 1003
+EXECUTE @papel=fn_PapelEnvolver 600
 print @papel
 go
 --3. Crea una función fn_OcupacionFregoneta a la que se pase el código de un vehículo y una fecha y nos indique 
@@ -63,8 +63,9 @@ GO
 GO
 SET NOCOUNT ON
 declare @ocupación decimal(6,2)
-EXECUTE @ocupación=fn_OcupacionFregoneta 6,'2015-04-03'
+EXECUTE @ocupación=fn_OcupacionFregoneta 6,'2015-04-01'
 print @ocupación
+Select * from TL_PaquetesNormales
 go
 
 
@@ -92,7 +93,7 @@ GO
 GO
 SET NOCOUNT ON
 declare @papel decimal(6,2)
-EXECUTE @papel=fn_CuantoPapel '2015-04-03'
+EXECUTE @papel=fn_CuantoPapel '2015-04-01'
 print @papel
 go
 --5. Modifica la función anterior para que en lugar de aceptar una fecha, acepte un rango de fechas (inicio y fin). 
@@ -110,7 +111,7 @@ BEGIN
 		insert into @mitabla(codigo)
 			Select Codigo
 			From TL_PaquetesNormales
-			where cast(fechaEntrega as date)>=@fechainicio and cast(fechaEntrega as date)<=@fechafin
+			where cast(fechaEntrega as date) between @fechainicio and @fechafin
 		update @mitabla
 			set papel=dbo.fn_PapelEnvolver(codigo)
 			select @resultado=sum(papel) from @mitabla
@@ -155,10 +156,19 @@ go
 set dateformat 'ymd'
 --1. Diseña una función fn_distancia recorrida a la que se pase un código de avión y 
 --un rango de fechas y nos devuelva la distancia total recorrida por ese avión en ese rango de fechas.
+GO
+CREATE FUNCTION fn_distancia(@codigo char(10),@fechainicio Date,@fechafin Date) Returns decimal(8,2) as 
+BEGIN
+Declare @resultado decimal(8,2)
+Select SUM(Distancia) from AL_distancia as D
+	inner join AL_Aeropuertos as A
+	on D.Origen=A.Codigo and D.Destino=A.Codigo
+	inner join AL_Vuelos as V
+	on D.Origen=V.Aeropuerto_Llegada and D.Destino=V.Aeropuerto_Salida
 
---CREATE FUNCTION fn_distancia(@codigo char(10),
-
-
+return @resultado
+END
+GO
 --2. Diseña una función fn_horasVuelo a la que se pase un código de avión y un rango de fechas 
 --y nos devuelva las horas totales que ha volado ese avión en ese rango de fechas.
 GO
@@ -184,9 +194,41 @@ print @horas
 --3. Diseña una función a la que se pase un código de avión y un rango de fechas y nos devuelva 
 --una tabla con los nombres y fechas de todos los aeropuertos en que ha estado el avión en ese intervalo.
 GO
-CREATE FUNCTION
-
+ALTER FUNCTION fn_EstacionamientoAvion (@codigo char(10),@fechainicio SmallDateTime,@fechafin SmallDateTime) 
+			   RETURNS @tabla TABLE(
+					Nombre_Aeropuerto varchar(30) null,
+					Fecha DATE null
+) AS
+BEGIN
+	Insert into @tabla
+			(Nombre_Aeropuerto,
+			 Fecha)
+		SELECT 
+			A.Nombre,
+			cast(Llegada as Date)
+			FROM AL_Vuelos as V
+			inner join AL_Aeropuertos as A
+			on V.Aeropuerto_Salida=A.Codigo
+				where V.Matricula_Avion=@codigo and Salida>=@fechainicio and Llegada<=@fechafin
+	
+	Insert into @tabla
+		(Nombre_Aeropuerto,
+		 Fecha)
+		SELECT 
+			A.Nombre,
+			cast(Llegada as Date)
+			FROM AL_Vuelos as V
+			inner join AL_Aeropuertos as A
+			on V.Aeropuerto_Llegada=A.Codigo
+				where V.Matricula_Avion=@codigo and Salida>=@fechainicio and Llegada<=@fechafin
+	
+RETURN
+END
 GO
+Select * from AL_Vuelos where Matricula_Avion='ESP4502'
+order by Salida
+Select * from fn_EstacionamientoAvion('ESP4502','2010-11-13 15:00:00','2015-11-14 18:00:00')
+order by Fecha
 --4. Diseña una función fn_ViajesCliente que nos devuelva nombre y apellidos, 
 --kilómetros recorridos y número de vuelos efectuados por cada cliente en un rango de fechas, 
 --ordenado de mayor a menor distancia recorrida.
