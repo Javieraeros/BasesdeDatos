@@ -160,12 +160,9 @@ GO
 CREATE FUNCTION fn_distancia(@codigo char(10),@fechainicio Date,@fechafin Date) Returns decimal(8,2) as 
 BEGIN
 Declare @resultado decimal(8,2)
-Select SUM(Distancia) from AL_distancia as D
-	inner join AL_Aeropuertos as A
-	on D.Origen=A.Codigo and D.Destino=A.Codigo
+Select @resultado=SUM(Distancia) from AL_Distancias as D
 	inner join AL_Vuelos as V
 	on D.Origen=V.Aeropuerto_Llegada and D.Destino=V.Aeropuerto_Salida
-
 return @resultado
 END
 GO
@@ -225,9 +222,9 @@ BEGIN
 RETURN
 END
 GO
-Select * from AL_Vuelos where Matricula_Avion='ESP4502'
+Select * from AL_Vuelos where Matricula_Avion='USA5068'
 order by Salida
-Select * from fn_EstacionamientoAvion('ESP4502','2010-11-13 15:00:00','2015-11-14 18:00:00')
+Select * from fn_EstacionamientoAvion('USA5068','2012-01-14 00:00:00','2012-01-30 00:00:00')
 order by Fecha
 --4. Diseña una función fn_ViajesCliente que nos devuelva nombre y apellidos, 
 --kilómetros recorridos y número de vuelos efectuados por cada cliente en un rango de fechas, 
