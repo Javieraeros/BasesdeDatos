@@ -1,0 +1,4 @@
+CREATE LOGIN prueba with password='prueba', DEFAULT_DATABASE=ICOTR
+USE ICOTR
+CREATE USER prueba FOR LOGIN prueba
+GRANT EXECUTE,SELECT TO prueba
