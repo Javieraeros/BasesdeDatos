@@ -1,11 +1,13 @@
 Use master
-Drop Database ElMusiquito
-If Not Exists(Select * from dbo.sysdatabases where name='ElMusiquito')
+If Exists(Select * from dbo.sysdatabases where name='ElMusiquito')
 	BEGIN
-	Create Database ElMusiquito
+	Drop Database ElMusiquito
 	END
 GO
 
+Create Database ElMusiquito
+
+Go
 Use ElMusiquito
 Go
 /*Tipo de acceso:
